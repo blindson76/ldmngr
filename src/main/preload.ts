@@ -20,6 +20,12 @@ const serviceHandler = {
   },
   removeAllListeners(event:string){
     return ipcRenderer.removeAllListeners(event);
+  },
+  async rpc(node:string, service:string, method:string, args:Object, cb:any){
+    return ipcRenderer.invoke('rpc', node, service, method, args);
+  },
+  async openFileDialog(props:Object){
+    return ipcRenderer.invoke('dialog', props)
   }
 }
 contextBridge.exposeInMainWorld('service', serviceHandler)

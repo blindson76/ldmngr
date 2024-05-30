@@ -9,7 +9,7 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, ipcRenderer } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, ipcRenderer, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
@@ -17,6 +17,7 @@ import { resolveHtmlPath } from './util';
 import { PXEServer } from './service/pxe';
 import { EventMon } from './util/EventMon';
 import { NodeListener } from './service/listener';
+import RPCService from './service/rpc';
 
 class AppUpdater {
   constructor() {
@@ -27,11 +28,12 @@ class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
-
-const mon = new EventMon({
+const services = {
   pxe: new PXEServer(),
-  mc: new NodeListener()
-})
+  mc: new NodeListener(),
+  rpc: new RPCService(),
+}
+const mon = new EventMon(services)
 .on('event', e=>{
   if (mainWindow?.webContents){
     mainWindow.webContents.send('event', e)
@@ -47,9 +49,21 @@ setInterval(()=>{
     mainWindow.webContents.send('event', 'tick')
   }
 }, 1000)
-ipcMain.on('invoke', (_event, data)=>{
+ipcMain
+.on('invoke', (_event, data)=>{
   const {target, method, args} = data;
   mon.publish(target, method, args)
+});
+
+ipcMain.handle('rpc', async(event, node, service, method, args)=>{
+  console.log('rpc call')
+  return services.rpc.call(node, service, method, args)
+
+});
+
+ipcMain.handle('dialog', async (event, props)=>{
+  console.log('dialog')
+  return dialog.showOpenDialog(mainWindow, { properties: ['openFile', 'multiSelections'] })
 })
 
 if (process.env.NODE_ENV === 'production') {

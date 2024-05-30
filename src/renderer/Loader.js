@@ -24,7 +24,13 @@ const Loader = () => {
     const api = useApi()
     useEffect(()=>{
       const rem = api.on('mc.heartbeat', (data)=>{
-        setNodes({...nodes, [data.hostname]:data})
+        setNodes(nodes => {
+          if (!nodes[data.hostname] || nodes[data.hostname].address != data.address){
+            console.log('adding node')
+            api.invoke('rpc','addNode',data)
+          }
+          return {...nodes, [data.hostname]:data}
+        })
       })
       return ()=>{
         console.log('removing listener')
@@ -32,9 +38,11 @@ const Loader = () => {
       }
     }, [])
 
+
     useCallback(()=>{
       console.log('cbb')
     }, [])
+
     const [exec, setExec] = useState({
         visible: false,
         command:'ipconfig',
@@ -45,18 +53,23 @@ const Loader = () => {
     const [uploaded, setUploaded] = useState("")
     const Action = (node, order) => {
       return (<>
-        <Button icon="pi pi-sign-out" tooltip='Logoff' rounded aria-label="Filter" size="small" onClick={()=>{
-                services[node.hostname].Loader.PowerCtl({
-                    order: 'Logoff'
-                }, (err, res)=>{
-                    console.log("res", res, "err", err)
-                })
+        <Button icon="pi pi-sign-out" tooltip='Logoff' rounded aria-label="Filter" size="small" onClick={async ()=>{
+                try{
+                  res = await api.rpc(node.hostname, 'Loader','PowerCtl', {
+                    order:'Logoff'
+                  })
+                  console.log('rrr',res)
+                  setUploaded(res.toString())
+
+                }
+                catch(e){
+
+                  setUploaded(JSON.parse(e.toString().split("'rpc':")[1]).Message)
+                }
         }}/>
         <Button icon="pi pi-refresh" tooltip='Restart' rounded aria-label="Filter" size="small" onClick={()=>{
-                services[node.hostname].Loader.PowerCtl({
-                    order: 'Restart'
-                }, (err, res)=>{
-                    console.log("res", res, "err", err)
+                api.invoke('rpc','call', node.hostname, 'Loader','PowerCtl', {
+                  order:'Restart'
                 })
         }}/>
         <Button icon="pi pi-power-off" tooltip='Shutdown' rounded aria-label="Filter" size="small" onClick={()=>{
@@ -239,6 +252,11 @@ export default () =>{
         group:'239.0.0.72'
       })
 
+      api.invoke('rpc','init', {
+        port:80,
+        address:'10.10.11.1'
+      })
+
       return ()=>{
         console.log('stopping pxe')
         api.invoke('pxe','stop')
@@ -250,6 +268,17 @@ export default () =>{
   return (
     <>
       <input type='checkbox' checked={checked} onChange={()=>setChecked(!checked)}/>
+      <button type='button' onClick={async ()=>{
+        try{
+          let res = await api.openFileDialog('hloader','Loader','PowerCtl', {
+            order:'Logoff'
+          })
+          console.log('res',res)
+        }catch(e){
+          //debugger
+          console.log('call err', e)
+        }
+      }}>Test</button>
       <Loader />
     </>
   )

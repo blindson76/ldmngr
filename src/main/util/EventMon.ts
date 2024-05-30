@@ -31,7 +31,7 @@ export class EventMon extends EventEmitter{
     try{
       this.emitters[target][method].apply(this.emitters[target], args)
     }catch(e){
-
+      console.log(e)
     }
   }
 }
