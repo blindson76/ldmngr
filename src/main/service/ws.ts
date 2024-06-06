@@ -14,7 +14,8 @@ export class WS extends EventEmitter{
   setup(){
     this.wss = expressWs(this.app)
     const router = express.Router();
-    router.ws('/', function(ws:WebSocket, req){
+    const mcListener = []
+    router.ws('/notify', function(ws:WebSocket, req){
       console.log('notify connected')
     })
     this.app.use('/mc', router)
