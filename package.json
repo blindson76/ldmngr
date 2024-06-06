@@ -104,13 +104,16 @@
     "electron-log": "^4.4.8",
     "electron-updater": "^6.1.4",
     "express": "^4.19.2",
+    "express-ws": "^5.0.2",
     "primeicons": "^7.0.0",
     "primereact": "^10.6.6",
     "quill": "^2.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.16.0",
-    "tftp": "^0.1.2"
+    "react-use-websocket": "^4.8.1",
+    "tftp": "^0.1.2",
+    "ws": "^8.17.0"
   },
   "devDependencies": {
     "@electron/notarize": "^2.1.0",

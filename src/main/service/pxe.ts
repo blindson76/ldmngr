@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import fs from 'fs'
+import { WS } from "./ws";
 const express = require('express'),
   dhcp = require('dhcp'),
   tftp = require('tftp');
@@ -9,6 +10,7 @@ export class PXEServer extends EventEmitter{
   httpSvr
   httpApp
   dhcpSvr
+  ws
   constructor(){
     super()
   }
@@ -22,6 +24,7 @@ export class PXEServer extends EventEmitter{
       address,
       root='C:/Users/ubozkurt/Desktop/work/pxe/root',
       tftpPort = 69,
+      dhcpOpts={},
 
     } = opts
     console.log('starting pxe server', root, tftpPort);
@@ -30,11 +33,12 @@ export class PXEServer extends EventEmitter{
       fs.mkdirSync(root)
     }
     const http = express();
+    this.ws = new WS(http)
     this.httpApp = http;
     http.use(express.static(root));
 
     this.httpSvr = http.listen(port, address, ()=>{
-      this.emit("http.started")
+      this.emit("http.started", port, address)
 
 
       this.tftpSvr = tftp.createServer({
@@ -53,6 +57,25 @@ export class PXEServer extends EventEmitter{
           type: "ASCII",
           name: "UUID/GUID-based client identifier"
         })
+        dhcp.addOption(43, {
+          config: "vendor",
+          type: "ASCII",
+          name: "deneme123"
+        })
+        dhcp.addOption(50, {// IP wish of client in DHCPDISCOVER
+          name: 'Requested IP Address',
+          type: 'IP',
+          attr: 'requestedIpAddress',
+          config: 'requestedIpAddress'
+        })
+
+        dhcp.addOption(60, {// RFC 2132: Sent by client to identify type of a client
+          name: 'Vendor Class-Identifier',
+          type: 'ASCII',
+          attr: 'vendorClassId',
+          config: 'vendorClassId'
+        })
+
         this.dhcpSvr = dhcp.createServer({
           // System settings
           range: [
@@ -66,11 +89,18 @@ export class PXEServer extends EventEmitter{
           router: [
             address
           ],
+          forceOptions:['vendor'],
           dns: ["8.8.8.8", "8.8.4.4"],
-          hostname: "hloadmgr",
+          hostname: "maintenance-pc",
           broadcast: '255.255.255.255',
           server: address, // This is us,
           tftpServer: address,
+          vendor:function(req, res){
+            if(dhcpOpts.vendor && typeof dhcpOpts.vendor == 'function'){
+              return dhcpOpts.vendor(req, res)
+            }
+            return 'service-pc'
+          },
           //bootFileSize: 672640,
           bootFile: function (req, res) {
 

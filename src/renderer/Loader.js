@@ -8,6 +8,7 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { useApi } from './serviceProvider';
+import useWebSocket, { ReadyState } from 'react-use-websocket';
 
 const Loader = () => {
 
@@ -265,8 +266,16 @@ export default () =>{
     }
 
   }, [checked])
+
+
+
+  const socketUrl ='ws://10.10.11.1:80/mc/'
+
+  const { sendMessage, lastMessage, readyState, getWebSocket } = useWebSocket(socketUrl, {reconnectInterval:1000, retryOnError:true});
+
   return (
     <>
+    <div>{readyState}:{lastMessage?lastMessage.data : ''}</div>
       <input type='checkbox' checked={checked} onChange={()=>setChecked(!checked)}/>
       <button type='button' onClick={async ()=>{
         try{

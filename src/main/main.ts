@@ -18,6 +18,7 @@ import { PXEServer } from './service/pxe';
 import { EventMon } from './util/EventMon';
 import { NodeListener } from './service/listener';
 import RPCService from './service/rpc';
+import { WS } from './service/ws';
 
 class AppUpdater {
   constructor() {
@@ -49,6 +50,7 @@ setInterval(()=>{
     mainWindow.webContents.send('event', 'tick')
   }
 }, 1000)
+
 ipcMain
 .on('invoke', (_event, data)=>{
   const {target, method, args} = data;
