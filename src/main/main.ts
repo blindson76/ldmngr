@@ -19,6 +19,7 @@ import { EventMon } from './util/EventMon';
 import { NodeListener } from './service/listener';
 import RPCService from './service/rpc';
 import { WS } from './service/ws';
+import LMApi from './service/api';
 
 class AppUpdater {
   constructor() {
@@ -30,9 +31,10 @@ class AppUpdater {
 
 let mainWindow: BrowserWindow | null = null;
 const services = {
-  pxe: new PXEServer(),
-  mc: new NodeListener(),
-  rpc: new RPCService(),
+  //pxe: new PXEServer(),
+  //mc: new NodeListener(),
+  //rpc: new RPCService(),
+  api: new LMApi()
 }
 const mon = new EventMon(services)
 .on('event', e=>{
@@ -112,14 +114,19 @@ const createWindow = async () => {
     height: 728,
     icon: getAssetPath('icon.png'),
     webPreferences: {
+      webSecurity:false,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
   });
+  console.log(resolveHtmlPath('index.html'))
 
-  mainWindow.loadURL(resolveHtmlPath('index.html'));
-
+  services.api.on('listening', port=>{
+    console.log('api ready at', port)
+    mainWindow.loadURL(resolveHtmlPath('index.html')+'?port='+port);
+  })
+  services.api.start()
   mainWindow.on('ready-to-show', () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');

@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useWebSocket } from 'react-use-websocket/dist/lib/use-websocket'
+import useMC from './mc'
+import usePXE from './pxe'
+import useRPC from './rpc'
 
-const CreateApi = opts => {
-    const rxRef = useRef(null)
-    const [nodes, setNodes] = useState({})
-    const [services, setServices] = useState({})
 
-    useEffect(()=>{
-    },[])
-
-    return window.service
-}
 export {
-    CreateApi
+    useMC,
+    usePXE,
+    useRPC,
 }

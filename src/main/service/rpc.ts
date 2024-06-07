@@ -1,6 +1,7 @@
 import EventEmitter from "events";
 import grpc, {loadPackageDefinition, credentials} from '@grpc/grpc-js'
 import {load} from '@grpc/proto-loader'
+import { RouterAPI } from "./router";
 
 const rpcOptions = {
   keepCase: true,
@@ -19,7 +20,7 @@ export default class RPCService extends EventEmitter{
     super()
   }
 
-  init(){
+  init(cb){
     console.log('rpc init')
     load(
         "C:/Users/ubozkurt/Desktop/work/hloader/proto/loader.proto",
@@ -29,6 +30,7 @@ export default class RPCService extends EventEmitter{
       const rpcService = loadPackageDefinition(packageDefinition).loader
       this.rpcService = rpcService
       this.emit('loaded')
+      cb()
       for(let node of this.queue){
         this.connect(node)
       }
@@ -37,6 +39,7 @@ export default class RPCService extends EventEmitter{
     })
     .catch(e=>{
       console.log(e)
+      cb(e)
     })
     const lServices =  {}
     // Object.values(nodes).forEach(node=>{
@@ -93,6 +96,30 @@ export default class RPCService extends EventEmitter{
       }else{
         rj('method not found')
       }
+    })
+  }
+}
+
+
+export class RPCApi extends RouterAPI {
+  rpc:RPCService = new RPCService()
+  constructor(){
+    super()
+    this.post('/addnode', (req, res)=>{
+      res.sendStatus(200)
+    })
+
+    this.post('/start', (req, res)=>{
+      this.rpc.init(err=>{
+        if(err){
+          res.send(400)
+        }else{
+          res.send(200)
+        }
+      })
+    })
+    this.post('/stop', (req, res)=>{
+      res.sendStatus(200)
     })
   }
 }

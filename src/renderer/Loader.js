@@ -9,8 +9,10 @@ import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { useApi } from './serviceProvider';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
+import { useMC, usePXE, useRPC } from './imp/service';
 
-const Loader = () => {
+const Loader = props => {
+
 
 
     const Footer = handleClick => {
@@ -20,24 +22,58 @@ const Loader = () => {
             </div>
         )
     }
-    const [nodes, setNodes] = useState({})
+
     const [services, setServices] = useState({})
     const api = useApi()
+    const {mc, rpc, pxe} = props
+
+
+    const {nodes, start:startMC, stop:stopMC, status} = useMC({
+      onNode: node => {
+        console.log(node)
+      }
+    })
+    const {start:startPXE, stop:stopPXE} = usePXE()
+    const {start:startRPC, stop:stopRPC} = useRPC()
+
+
+
     useEffect(()=>{
-      const rem = api.on('mc.heartbeat', (data)=>{
-        setNodes(nodes => {
-          if (!nodes[data.hostname] || nodes[data.hostname].address != data.address){
-            console.log('adding node')
-            api.invoke('rpc','addNode',data)
-          }
-          return {...nodes, [data.hostname]:data}
-        })
-      })
+      if(mc){
+        startMC()
+      }
+      else{
+        stopMC()
+      }
       return ()=>{
         console.log('removing listener')
-        rem()
       }
-    }, [])
+    }, [mc])
+
+    useEffect(()=>{
+      if(pxe){
+        startPXE()
+      }
+      else{
+        stopPXE()
+      }
+      return ()=>{
+        console.log('removing listener')
+      }
+    }, [pxe])
+
+    useEffect(()=>{
+      if(rpc){
+        startRPC()
+      }
+      else{
+        stopRPC()
+      }
+      return ()=>{
+        console.log('removing listener')
+      }
+    }, [rpc])
+
 
 
     useCallback(()=>{
@@ -236,47 +272,22 @@ export default () =>{
 
   const api = useApi()
 
-  const [checked, setChecked] = useState(true)
-
-
-  useEffect(()=>{
-    if(checked) {
-      console.log('starting pxe')
-      api.invoke('pxe','start', {
-        port:80,
-        address:'10.10.11.1'
-      })
-
-      api.invoke('mc','listen', {
-        port:16644,
-        interface:'10.10.11.1',
-        group:'239.0.0.72'
-      })
-
-      api.invoke('rpc','init', {
-        port:80,
-        address:'10.10.11.1'
-      })
-
-      return ()=>{
-        console.log('stopping pxe')
-        api.invoke('pxe','stop')
-        api.invoke('mc','stop')
-      }
-    }
-
-  }, [checked])
+  const [mc, setMC] = useState(true)
+  const [pxe, setPXE] = useState(true)
+  const [rpc, setRPC] = useState(true)
 
 
 
-  const socketUrl ='ws://10.10.11.1:80/mc/'
 
-  const { sendMessage, lastMessage, readyState, getWebSocket } = useWebSocket(socketUrl, {reconnectInterval:1000, retryOnError:true});
 
   return (
     <>
-    <div>{readyState}:{lastMessage?lastMessage.data : ''}</div>
-      <input type='checkbox' checked={checked} onChange={()=>setChecked(!checked)}/>
+      <input type='checkbox' checked={mc} onChange={()=>setMC(!mc)}/>
+      <label>mc</label>
+      <input type='checkbox' checked={pxe} onChange={()=>setPXE(!pxe)}/>
+      <label>pxe</label>
+      <input type='checkbox' checked={rpc} onChange={()=>setRPC(!rpc)}/>
+      <label>rpc</label>
       <button type='button' onClick={async ()=>{
         try{
           let res = await api.openFileDialog('hloader','Loader','PowerCtl', {
@@ -288,7 +299,7 @@ export default () =>{
           console.log('call err', e)
         }
       }}>Test</button>
-      <Loader />
+      <Loader {...{mc,pxe,rpc}}/>
     </>
   )
 }

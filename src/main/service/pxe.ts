@@ -1,22 +1,19 @@
 import { EventEmitter } from "events";
 import fs from 'fs'
-import { WS } from "./ws";
+import { RouterAPI } from "./router";
 const express = require('express'),
   dhcp = require('dhcp'),
   tftp = require('tftp');
 
 export class PXEServer extends EventEmitter{
   tftpSvr
-  httpSvr
-  httpApp
   dhcpSvr
-  ws
   constructor(){
     super()
   }
 
-  start(opts){
-    if(this.httpSvr){
+  start(opts, cb){
+    if(this.tftpSvr){
       return
     }
     const {
@@ -32,13 +29,6 @@ export class PXEServer extends EventEmitter{
     if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()){
       fs.mkdirSync(root)
     }
-    const http = express();
-    this.ws = new WS(http)
-    this.httpApp = http;
-    http.use(express.static(root));
-
-    this.httpSvr = http.listen(port, address, ()=>{
-      this.emit("http.started", port, address)
 
 
       this.tftpSvr = tftp.createServer({
@@ -113,9 +103,13 @@ export class PXEServer extends EventEmitter{
             console.log('dhcp')
             this.emit('dhcp.started')
             this.emit('listening')
+            if(cb){
+              cb()
+            }
           })
           .on('error', (err:Error)=>{
             console.log('dhcp err:',err)
+            cb(err)
           })
           .listen(null, address);
       })
@@ -127,20 +121,43 @@ export class PXEServer extends EventEmitter{
       })
       .listen()
 
-    })
-
   }
 
-  stop(){
+  stop(cb){
     console.log('stoping http server')
-    this.httpSvr.close(()=>{
-      console.log('http stopped')
-    })
     this.tftpSvr.close(()=>{
       console.log('tftp stopped')
+      cb()
     })
+    this.tftpSvr = null
     this.dhcpSvr.close(()=>{
       console.log('dhcp stopped')
     })
+  }
+}
+
+export class PXEApi extends RouterAPI{
+  pxe:PXEServer=new PXEServer()
+  constructor(){
+    super()
+    this.post('/start', (req,res)=>{
+      this.pxe.start(req.body, err=>{
+        if(err){
+          res.send(400)
+        }else{
+          res.send(200)
+        }
+      })
+    })
+    this.post('/stop', (req,res)=>{
+      this.pxe.stop(err=>{
+        if(err){
+          res.send(400)
+        }else{
+          res.send(200)
+        }
+      })
+    })
+
   }
 }
