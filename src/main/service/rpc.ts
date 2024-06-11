@@ -1,7 +1,8 @@
 import EventEmitter from "events";
-import grpc, {loadPackageDefinition, credentials} from '@grpc/grpc-js'
-import {load} from '@grpc/proto-loader'
+const grpc = require('@grpc/grpc-js')
+const protoLoader = require('@grpc/proto-loader')
 import { RouterAPI } from "./router";
+import WebSocket from "ws";
 
 const rpcOptions = {
   keepCase: true,
@@ -21,13 +22,13 @@ export default class RPCService extends EventEmitter{
   }
 
   init(cb){
-    console.log('rpc init')
-    load(
-        "C:/Users/ubozkurt/Desktop/work/hloader/proto/loader.proto",
-        rpcOptions
-    )
-    .then(packageDefinition=>{
-      const rpcService = loadPackageDefinition(packageDefinition).loader
+    try{
+      console.log('rpc init')
+      const packageDefinition = protoLoader.loadSync(
+          "C:\\Users\\ubozkurt\\Desktop\\work\\hloader\\proto\\loader.proto",
+          rpcOptions
+      )
+      const rpcService = grpc.loadPackageDefinition(packageDefinition).loader
       this.rpcService = rpcService
       this.emit('loaded')
       cb()
@@ -36,20 +37,11 @@ export default class RPCService extends EventEmitter{
       }
       this.queue = []
 
-    })
-    .catch(e=>{
-      console.log(e)
+    }catch(e){
+      console.log('rpc init err',e)
       cb(e)
-    })
+    }
     const lServices =  {}
-    // Object.values(nodes).forEach(node=>{
-    //     const {hostname, address} = node
-    //     lServices[hostname] = ["Loader", "Deployment", "Recording", "Maintain"].reduce((svc, s)=>({[s]:new rpcService[s](
-    //         address,
-    //         grpc.credentials.createInsecure()
-    //     ), ...svc}), {})
-    // })
-    // setServices({...lServices})
 
   }
   addNode(node:{hostname:string, address:string}){
@@ -63,21 +55,21 @@ export default class RPCService extends EventEmitter{
 
   connect(node:string){
 
-    const {hostname, address} = node;
+    const {hostname, address, id} = node;
     console.log('connect to rpc',hostname)
-    if (this.nodes[hostname]){
-      Object.values(this.nodes[hostname]).forEach(rpc=>{
+    if (this.nodes[id]){
+      Object.values(this.nodes[id]).forEach(rpc=>{
         rpc.close(()=>{
           console.log('closed rpc')
         })
       })
-      this.nodes[hostname] = null
+      this.nodes[id] = null
     }
     const svc = ["Loader", "Deployment", "Recording", "Maintain"].reduce((svc, s)=>({[s]:new this.rpcService[s](
               address,
-              credentials.createInsecure()
+              grpc.credentials.createInsecure()
           ), ...svc}), {})
-    this.nodes[hostname] = svc
+    this.nodes[id] = svc
     //console.log(this.nodes.hostname)
   }
   call(hostname:string, service:string, method:string, args:any){
@@ -105,7 +97,8 @@ export class RPCApi extends RouterAPI {
   rpc:RPCService = new RPCService()
   constructor(){
     super()
-    this.post('/addnode', (req, res)=>{
+    this.post('/add-node', (req, res)=>{
+      this.rpc.addNode(req.body)
       res.sendStatus(200)
     })
 
@@ -120,6 +113,56 @@ export class RPCApi extends RouterAPI {
     })
     this.post('/stop', (req, res)=>{
       res.sendStatus(200)
+    })
+
+    this.ws('/node/:id/:service/:method', (ws:WebSocket, req)=>{
+      //console.log("wsss", req.params, req.query)
+      const {id, service, method} = req.params
+      try{
+        const svc = this.rpc.nodes[id][service]
+        if(!svc || !svc[method]){
+          return ws.close(4000,'method not found')
+        }
+
+        if(svc[method].responseStream){
+          ws.once('message', msg=>{
+            const params = JSON.parse(msg)
+            const call = svc[method](params)
+            call.on('data', data=>{
+              console.log('stream data', data)
+              ws.send(JSON.stringify(data))
+            })
+            call.on('error', err=>{
+              ws.close(4004, err.toString())
+            })
+            call.on('close', ()=>{
+              try{
+                ws.close(1000)
+              }catch(e){
+
+              }
+            })
+            ws.once('message', msg=>{
+              const params = JSON.parse(msg)
+              call.write(params)
+            })
+          })
+        }else{
+          ws.once('message', msg=>{
+            const params = JSON.parse(msg)
+            svc[method](params, (err, res)=>{
+              if(err){
+                ws.close(4004, err.toString())
+              }else{
+                ws.close(1000, JSON.stringify(res))
+              }
+            })
+          })
+        }
+
+      }catch(e){
+        console.log('call err',e)
+      }
     })
   }
 }

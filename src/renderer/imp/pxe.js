@@ -3,7 +3,8 @@ import { useWebSocket } from 'react-use-websocket/dist/lib/use-websocket'
 
 const port = window.location.search.split('port=')[1]
 
-const start = async ()=>{
+const start = async (opts)=>{
+  console.log('starting', opts)
   const Url =`http://localhost:${port}/pxe/start`
   const raw = await fetch(Url, {
     method:'POST',
@@ -11,11 +12,7 @@ const start = async ()=>{
       'Accept': 'application/json',
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      interface:'10.10.11.1',
-      port:16644,
-      group:'239.0.0.72'
-    })
+    body: JSON.stringify(opts)
   });
   const data = await raw.json()
 
@@ -31,29 +28,36 @@ const stop = async ()=>{
 export default (props) => {
 
   const [connected, setConnected] = useState(false)
+  const [cfg, setCfg] = useState({
+    open:false,
+    connected:false,
+    opts:{}
+  })
+
   const [open, setOpen] = useState(false)
+  const [opts, setOpts] = useState()
   useEffect(()=>{
 
-    if(open){
+    if(cfg.open){
       (async()=>{
         try{
-          await start()
-          setConnected(true)
+          await start(cfg.opts)
+          setCfg(cfg=>({...cfg, connected:true}))
         }catch(e){
-          setConnected(false)
+          setCfg(cfg=>({...cfg, connected:false}))
         }
       })()
       return async ()=>{
         await stop()
-        setConnected(false)
+        setCfg(cfg=>({...cfg, connected:false}))
       }
     }
 
-  }, [open])
+  }, [cfg.open])
 
   return {
-    start: ()=>{setOpen(true)},
-    stop: ()=>{setOpen(false)},
+    start: (opts)=>{setCfg(cfg=>({...cfg, open:true, opts}))},
+    stop: ()=>{setCfg(cfg=>({...cfg, open:false}))},
     connected
   }
 }

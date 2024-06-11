@@ -29,12 +29,13 @@ const Loader = props => {
 
 
     const {nodes, start:startMC, stop:stopMC, status} = useMC({
-      onNode: node => {
+      onNode: async node => {
         console.log(node)
+        await addNode(node)
       }
     })
     const {start:startPXE, stop:stopPXE} = usePXE()
-    const {start:startRPC, stop:stopRPC} = useRPC()
+    const {start:startRPC, stop:stopRPC, addNode, invoke} = useRPC()
 
 
 
@@ -52,7 +53,13 @@ const Loader = props => {
 
     useEffect(()=>{
       if(pxe){
-        startPXE()
+        startPXE({
+          interface:'10.10.11.1',
+          address:'10.10.11.1',
+          port:16644,
+          group:'239.0.0.72',
+          root:'C:/Users/ubozkurt/Desktop/work/pxe/root'
+        })
       }
       else{
         stopPXE()
@@ -92,48 +99,135 @@ const Loader = props => {
       return (<>
         <Button icon="pi pi-sign-out" tooltip='Logoff' rounded aria-label="Filter" size="small" onClick={async ()=>{
                 try{
-                  res = await api.rpc(node.hostname, 'Loader','PowerCtl', {
+                  const call = invoke(node.id, 'Loader','PowerCtl', {
                     order:'Logoff'
                   })
-                  console.log('rrr',res)
-                  setUploaded(res.toString())
+                  .on('done', (err, res)=>{
+                    if(err){
+                      setUploaded(err)
+                    }else{
+                      console.log(res)
+                      setUploaded(res.Message)
+                    }
+                  })
+                  .on('data', data=>{
+                    console.log(data)
+                  })
+                  //console.log('rrr',res)
+                  //setUploaded(res.toString())
 
                 }
                 catch(e){
 
-                  setUploaded(JSON.parse(e.toString().split("'rpc':")[1]).Message)
+                  setUploaded(JSON.parse(e.toString()))
                 }
         }}/>
         <Button icon="pi pi-refresh" tooltip='Restart' rounded aria-label="Filter" size="small" onClick={()=>{
-                api.invoke('rpc','call', node.hostname, 'Loader','PowerCtl', {
-                  order:'Restart'
-                })
+
+                try{
+                  const call = invoke(node.id, 'Loader','PowerCtl', {
+                    order:'Restart'
+                  })
+                  .on('done', (err, res)=>{
+                    if(err){
+                      setUploaded(err)
+                    }else{
+                      console.log(res)
+                      setUploaded(res.Message)
+                    }
+                  })
+                  .on('data', data=>{
+                    console.log(data)
+                  })
+                  //console.log('rrr',res)
+                  //setUploaded(res.toString())
+
+                }
+                catch(e){
+
+                  setUploaded(e.toString())
+                }
         }}/>
         <Button icon="pi pi-power-off" tooltip='Shutdown' rounded aria-label="Filter" size="small" onClick={()=>{
-                services[node.hostname].Loader.PowerCtl({
-                    order: 'Shutdown'
-                }, (err, res)=>{
-                    console.log("res", res, "err", err)
-                })
+
+                try{
+                  const call = invoke(node.id, 'Loader','PowerCtl', {
+                    order:'Shutdown'
+                  })
+                  .on('done', (err, res)=>{
+                    if(err){
+                      setUploaded(err)
+                    }else{
+                      console.log(res)
+                      setUploaded(res.Message)
+                    }
+                  })
+                  .on('data', data=>{
+                    console.log(data)
+                  })
+                  //console.log('rrr',res)
+                  //setUploaded(res.toString())
+
+                }
+                catch(e){
+
+                  setUploaded(e.toString())
+                }
         }}/>
         <Button icon="pi pi-microsoft" tooltip='Restart to Win' rounded aria-label="Filter" size="small" onClick={()=>{
-                services[node.hostname].Loader.PowerCtl({
-                    order: 'RestartTo',
-                    param: 1
-                }, (err, res)=>{
-                    console.log("res", res, "err", err)
-                })
+
+                try{
+                  const call = invoke(node.id, 'Loader','PowerCtl', {
+                    order:'RestartTo',
+                    param:1
+                  })
+                  .on('done', (err, res)=>{
+                    if(err){
+                      setUploaded(err)
+                    }else{
+                      console.log(res)
+                      setUploaded(res.Message)
+                    }
+                  })
+                  .on('data', data=>{
+                    console.log(data)
+                  })
+                  //console.log('rrr',res)
+                  //setUploaded(res.toString())
+
+                }
+                catch(e){
+
+                  setUploaded(e.toString())
+                }
         }}/>
 
         <Button icon="pi pi-android" tooltip='Restart To Linux' rounded aria-label="Filter" size="small" onClick={()=>{
-            console.log(services[node.hostname])
 
-            services[node.hostname].Loader.PowerCtl({
-                order: 'RestartTo',
-                param: 2
-            }, (err, res)=>{
-                console.log("res", res, "err", err)
-            })
+            try{
+              const call = invoke(node.id, 'Loader','PowerCtl', {
+                order:'RestartTo',
+                param:2
+              })
+              .on('done', (err, res)=>{
+                if(err){
+                  setUploaded(err)
+                }else{
+                  console.log(res)
+                  setUploaded(res.Message)
+                }
+              })
+              .on('data', data=>{
+                console.log(data)
+              })
+              //console.log('rrr',res)
+              //setUploaded(res.toString())
+
+            }
+            catch(e){
+
+              setUploaded(e.toString())
+            }
         }}/>
         <Button icon="pi pi-angle-right" tooltip='Exec command' rounded aria-label="Filter" size="small" onClick={()=>setExec(e=>({...e, node, visible: true}))}/>
         <Button icon="pi pi-upload" tooltip='Upload File' rounded aria-label="Filter" size="small" onClick={async (node)=>{
@@ -141,11 +235,12 @@ const Loader = props => {
 
         }} />
         <Button tooltip="Format disk" icon="pi pi-database" rounded aria-label="Filter" size="small" onClick={()=>{
-            console.log(services[node.hostname])
-            services[node.hostname].Maintain.FormatDisks({
+
+            try{
+              const call = invoke(node.id, 'Maintain','FormatDisks', {
                 disks: [
                     {
-                        location:'pci0000:00/0000:00:01.1',
+                        location:'pci0000:00/0000:00:0d.0',
                         partitionType:'gpt',
                         partitions: [
                             {
@@ -166,20 +261,31 @@ const Loader = props => {
                     }
                 ]
             })
-            .on('error',console.log)
-            .on('data',data=>{
-                console.log(data.status.toString("utf-8"))
-                setUploaded(data.status.toString("utf-8"))
-            })
-            .on('end',()=>{
-                console.log('finish')
-            })
+              .on('done', (err, res)=>{
+                if(err){
+                  setUploaded(err)
+                }else{
+                  setUploaded("Success")
+                }
+              })
+              .on('data', data=>{
+                setUploaded(data.status)
+              })
+              //console.log('rrr',res)
+              //setUploaded(res.toString())
+
+            }
+            catch(e){
+              console.log('err',e)
+              setUploaded(e.toString())
+            }
+
         }}/>
         <Button icon="pi pi-clone" tooltip='Prepare ESP' rounded aria-label="Filter" size="small" onClick={()=>{
             const call = services[node.hostname].Maintain.ApplyImage({
                 imagePath:'esp.wim',
                 imageIndex:1,
-                targetDisk:'pci0000:00/0000:00:01.1',
+                targetDisk:'pci0000:00/0000:00:0d.0',
                 targetPartition:1
             })
             .on('error',console.log)
@@ -235,15 +341,31 @@ const Loader = props => {
     }
     const style={style:{fontFamily:'monospace'}}
     const handleClick = ()=>{
-        console.log('click', exec)
         const [proc, ...args] = exec.command.split(' ')
-        services[exec.node.hostname].Deployment.Exec({
+        try{
+          const call = invoke(exec.node.id, 'Deployment','Exec', {
             Proc: proc,
             Args: args
-        }, (err, res)=>{
-            console.log("res", res, "err", err)
-            setExec(e=>({...e, result:res.Out}))
         })
+          .on('done', (err, res)=>{
+            if(err){
+              setExec(e=>({...e, result:err}))
+            }else{
+              console.log(res)
+              setExec(e=>({...e, result:res}))
+            }
+          })
+          .on('data', data=>{
+            console.log(data)
+          })
+          //console.log('rrr',res)
+          //setUploaded(res.toString())
+
+        }
+        catch(err){
+
+          setExec(e=>({...e, result:err}))
+        }
     }
 
     return (
@@ -272,11 +394,29 @@ export default () =>{
 
   const api = useApi()
 
+  useEffect(()=>{
+
+    const port = window.location.search.split('port=')[1]
+    const Url =`http://localhost:${port}/start`
+    const raw = fetch(Url, {
+      method:'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        root:'C:/Users/ubozkurt/Desktop/work/pxe/root'
+      })
+    }).then(raw=>raw.json())
+    .then(res=>console.log(res))
+    .catch(e=>console.log(e))
+  }, [])
+
   const [mc, setMC] = useState(true)
   const [pxe, setPXE] = useState(true)
   const [rpc, setRPC] = useState(true)
 
-
+  const {start:startRPC, stop:stopRPC, addNode, invoke} = useRPC()
 
 
 
@@ -290,13 +430,17 @@ export default () =>{
       <label>rpc</label>
       <button type='button' onClick={async ()=>{
         try{
-          let res = await api.openFileDialog('hloader','Loader','PowerCtl', {
+          const call = invoke(11, "Loader", "PowerCtl", {
             order:'Logoff'
           })
-          console.log('res',res)
+          .on('data', data=>{
+            console.log('data', data)
+          })
+          .on('done', (err, res)=>{
+            console.log('done', err, res)
+          })
         }catch(e){
-          //debugger
-          console.log('call err', e)
+
         }
       }}>Test</button>
       <Loader {...{mc,pxe,rpc}}/>

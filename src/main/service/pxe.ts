@@ -14,7 +14,7 @@ export class PXEServer extends EventEmitter{
 
   start(opts, cb){
     if(this.tftpSvr){
-      return
+      return cb()
     }
     const {
       port,
@@ -24,7 +24,7 @@ export class PXEServer extends EventEmitter{
       dhcpOpts={},
 
     } = opts
-    console.log('starting pxe server', root, tftpPort);
+    console.log('starting pxe server');
 
     if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()){
       fs.mkdirSync(root)
@@ -109,7 +109,6 @@ export class PXEServer extends EventEmitter{
           })
           .on('error', (err:Error)=>{
             console.log('dhcp err:',err)
-            cb(err)
           })
           .listen(null, address);
       })
@@ -142,6 +141,7 @@ export class PXEApi extends RouterAPI{
     super()
     this.post('/start', (req,res)=>{
       this.pxe.start(req.body, err=>{
+        console.log("pxe err",err)
         if(err){
           res.send(400)
         }else{

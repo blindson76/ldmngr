@@ -14,7 +14,7 @@ export class NodeListener extends EventEmitter{
 
   listen(opts:{interface:string, group:string, port:number|undefined},cb){
     if (this.rx){
-      return
+      return cb()
     }
     this.rx = createSocket({
       type:'udp4',
@@ -75,14 +75,14 @@ export class ListenerAPI extends RouterAPI{
     this.post('/start', (req,res)=>{
       this.mc.listen(req.body, err=>{
         console.log(err)
-        res.send(200)
+        res.sendStatus(200)
       })
       console.log('mc start req')
     })
 
     this.post('/stop', (req,res)=>{
       this.mc.stop(()=>{
-        res.send(200)
+        res.sendStatus(200)
       })
       console.log('mc start req')
     })

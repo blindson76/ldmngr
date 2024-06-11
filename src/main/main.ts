@@ -14,11 +14,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { PXEServer } from './service/pxe';
 import { EventMon } from './util/EventMon';
-import { NodeListener } from './service/listener';
-import RPCService from './service/rpc';
-import { WS } from './service/ws';
 import LMApi from './service/api';
 
 class AppUpdater {
@@ -120,7 +116,6 @@ const createWindow = async () => {
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
   });
-  console.log(resolveHtmlPath('index.html'))
 
   services.api.on('listening', port=>{
     console.log('api ready at', port)

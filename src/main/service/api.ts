@@ -23,7 +23,6 @@ export default class LMApi extends EventEmitter {
     console.log('setup api')
 
     this.setup()
-    this.app.use(express.json())
     this.app.use('/mc', this.mc)
     this.app.use('/pxe', this.pxe)
     this.app.use('/rpc', this.rpc)
@@ -31,14 +30,16 @@ export default class LMApi extends EventEmitter {
 
   start() {
 
-    const listener = this.app.listen(0,'localhost', ()=>{
+    const listener = this.app.listen(80,'0.0.0.0', ()=>{
       this.emit('listening',listener.address().port)
-      this.emit('start', listener.address().port)
     })
   }
 
   setup(){
+    this.app.use(express.json())
     this.app.post('/start', (req,res)=>{
+      this.app.use('/', express.static(req.body.root))
+      console.log("api start", req.body)
       setTimeout(()=>{
         res.send({status:'OK'})
       },200)
