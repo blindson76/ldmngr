@@ -179,7 +179,7 @@ const Loader = props => {
                 try{
                   const call = invoke(node.id, 'Loader','PowerCtl', {
                     order:'RestartTo',
-                    param:1
+                    bootEntry:'HARDDISK'
                   })
                   .on('done', (err, res)=>{
                     if(err){
@@ -207,7 +207,7 @@ const Loader = props => {
             try{
               const call = invoke(node.id, 'Loader','PowerCtl', {
                 order:'RestartTo',
-                param:2
+                bootEntry:'PXE'
               })
               .on('done', (err, res)=>{
                 if(err){
@@ -282,53 +282,90 @@ const Loader = props => {
 
         }}/>
         <Button icon="pi pi-clone" tooltip='Prepare ESP' rounded aria-label="Filter" size="small" onClick={()=>{
-            const call = services[node.hostname].Maintain.ApplyImage({
-                imagePath:'esp.wim',
-                imageIndex:1,
-                targetDisk:'pci0000:00/0000:00:0d.0',
-                targetPartition:1
+          try{
+            const call = invoke(node.id, 'Maintain','ApplyImage', {
+              imagePath:'esp.wim',
+              imageIndex:1,
+              targetDisk:'pci0000:00/0000:00:0d.0',
+              targetPartition:1
+          })
+            .on('done', (err, res)=>{
+              if(err){
+                setUploaded(err)
+              }else{
+                setUploaded("Success")
+              }
             })
-            .on('error',console.log)
-            .on('data',data=>{
-                console.log(data.status.toString("utf-8"))
-                setUploaded(data.status.toString("utf-8"))
+            .on('data', data=>{
+              setUploaded(data.status)
             })
-            .on('end',()=>{
-                console.log('finish')
-            })
-            .on('close',()=>{
-                console.log('finish')
-            })
+
+            //console.log('rrr',res)
+            //setUploaded(res.toString())
+
+          }
+          catch(e){
+            console.log('err',e)
+            setUploaded(e.toString())
+          }
         }}/>
         <Button icon="pi pi-wrench" tooltip='BCDFix' rounded aria-label="Filter" size="small" onClick={()=>{
-            const call = services[node.hostname].Maintain.BCDFix({
-                espDisk:'pci0000:00/0000:00:01.1',
-                espPartition:1,
-                osDisk:'pci0000:00/0000:00:01.1',
-                osPartition:2,
-            }, (data,err)=>{
-                console.log(data, err)
+          try{
+            const call = invoke(node.id, 'Maintain','BCDFix', {
+              espDisk:'pci0000:00/0000:00:0d.0',
+              espPartition:1,
+              osDisk:'pci0000:00/0000:00:0d.0',
+              osPartition:2,
+          })
+            .on('done', (err, res)=>{
+              if(err){
+                setUploaded(err)
+              }else{
+                setUploaded("Success")
+              }
             })
+            .on('data', data=>{
+              setUploaded(data.status)
+            })
+
+            //console.log('rrr',res)
+            //setUploaded(res.toString())
+
+          }
+          catch(e){
+            console.log('err',e)
+            setUploaded(e.toString())
+          }
         }}/>
 
 <Button icon="pi pi-database" tooltip='Load OS' rounded aria-label="Filter" size="small" onClick={()=>{
-            const call = services[node.hostname].Maintain.ApplyImage({
-                imagePath:'winpe.wim',
-                imageIndex:1,
-                targetDisk:'pci0000:00/0000:00:01.1',
-                targetPartition:2
-            })
-            .on('error',console.log)
-            .on('data',data=>{
-                console.log(data.status.toString("utf-8"))
-                setUploaded(data.status.toString("utf-8"))
-            })
-            .on('end',()=>{
-                console.log('finish')
-            })
-            .on('close',()=>{
-                console.log('finish')
-            })
+    try{
+      const call = invoke(node.id, 'Maintain','ApplyImage', {
+        imagePath:'winpe.wim',
+        imageIndex:1,
+        targetDisk:'pci0000:00/0000:00:0d.0',
+        targetPartition:2
+    })
+      .on('done', (err, res)=>{
+        if(err){
+          setUploaded(err)
+        }else{
+          setUploaded("Success")
+        }
+      })
+      .on('data', data=>{
+        console.log(data)
+        setUploaded(data.status)
+      })
+
+      //console.log('rrr',res)
+      //setUploaded(res.toString())
+
+    }
+    catch(e){
+      console.log('err',e)
+      setUploaded(e.toString())
+    }
         }}/>
         <div>
         <input style={{visibility:'hidden'}} type="file" nwdirectory="" ref={fileRef} onChange={async e=>{
@@ -351,12 +388,13 @@ const Loader = props => {
             if(err){
               setExec(e=>({...e, result:err}))
             }else{
-              console.log(res)
-              setExec(e=>({...e, result:res}))
+              //console.log(res)
+              //setExec(e=>({...e, result:res}))
             }
           })
           .on('data', data=>{
-            console.log(data)
+            //console.log(data.Out)
+            setExec(e=>({...e, result:data.Out}))
           })
           //console.log('rrr',res)
           //setUploaded(res.toString())

@@ -127,13 +127,16 @@ export class RPCApi extends RouterAPI {
         if(svc[method].responseStream){
           ws.once('message', msg=>{
             const params = JSON.parse(msg)
+            console.log(params)
             const call = svc[method](params)
             call.on('data', data=>{
               console.log('stream data', data)
               ws.send(JSON.stringify(data))
             })
             call.on('error', err=>{
-              ws.close(4004, err.toString())
+              console.log(err)
+              ws.send(err.toString())
+              ws.close(4004)
             })
             call.on('close', ()=>{
               try{
@@ -143,6 +146,7 @@ export class RPCApi extends RouterAPI {
               }
             })
             ws.once('message', msg=>{
+              console.log(msg)
               const params = JSON.parse(msg)
               call.write(params)
             })
@@ -154,7 +158,8 @@ export class RPCApi extends RouterAPI {
               if(err){
                 ws.close(4004, err.toString())
               }else{
-                ws.close(1000, JSON.stringify(res))
+                ws.send(JSON.stringify(res))
+                ws.close(1000)
               }
             })
           })

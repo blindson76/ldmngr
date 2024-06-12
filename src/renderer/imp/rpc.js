@@ -52,7 +52,11 @@ const invoke = (node, service, method, param) => {
     }
   }
   wss.onmessage =  msg=>{
-    emitter.emit('data',JSON.parse(msg.data))
+    try{
+      emitter.emit('data',JSON.parse(msg.data))
+    }catch(e){
+      emitter.emit('data', msg.data)
+    }
   }
   wss.onerror = err=>{
     console.log('ws err',err)
