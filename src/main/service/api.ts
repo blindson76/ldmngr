@@ -1,14 +1,12 @@
-import { EventEmitter } from "ws";
+import { EventEmitter } from "events";
 
 import expressWs from 'express-ws'
-import { Listener, ListenerAPI, NodeListener } from "./listener";
+import { ListenerAPI } from "./listener";
 import { PXEApi, PXEServer } from "./pxe";
 import { RPCApi } from "./rpc";
-const express = require('express'),
-  dhcp = require('dhcp'),
-  tftp = require('tftp');
+import express from 'express';
 
-export default class LMApi extends EventEmitter {
+export default class LMApi extends EventEmitter{
   app = express()
   ws = expressWs(this.app)
 
@@ -20,8 +18,6 @@ export default class LMApi extends EventEmitter {
 
   constructor(){
     super()
-    console.log('setup api')
-
     this.setup()
     this.app.use('/mc', this.mc)
     this.app.use('/pxe', this.pxe)
@@ -37,12 +33,13 @@ export default class LMApi extends EventEmitter {
 
   setup(){
     this.app.use(express.json())
+    this.app.use((req, res, next)=>{
+      console.log("http:", req.method, req.url)
+      next()
+    })
     this.app.post('/start', (req,res)=>{
       this.app.use('/', express.static(req.body.root))
-      console.log("api start", req.body)
-      setTimeout(()=>{
-        res.send({status:'OK'})
-      },200)
+      res.send({status:'OK'})
     })
   }
 }

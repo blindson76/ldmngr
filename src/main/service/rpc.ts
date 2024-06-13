@@ -1,5 +1,6 @@
 import EventEmitter from "events";
 const grpc = require('@grpc/grpc-js')
+import {loadSync} from '@grpc/proto-loader'
 const protoLoader = require('@grpc/proto-loader')
 import { RouterAPI } from "./router";
 import WebSocket from "ws";
@@ -23,7 +24,6 @@ export default class RPCService extends EventEmitter{
 
   init(cb){
     try{
-      console.log('rpc init')
       const packageDefinition = protoLoader.loadSync(
           "C:\\Users\\ubozkurt\\Desktop\\work\\hloader\\proto\\loader.proto",
           rpcOptions
@@ -56,7 +56,7 @@ export default class RPCService extends EventEmitter{
   connect(node:string){
 
     const {hostname, address, id} = node;
-    console.log('connect to rpc',hostname)
+    //console.log('connecting to rpc',hostname)
     if (this.nodes[id]){
       Object.values(this.nodes[id]).forEach(rpc=>{
         rpc.close(()=>{
@@ -105,9 +105,9 @@ export class RPCApi extends RouterAPI {
     this.post('/start', (req, res)=>{
       this.rpc.init(err=>{
         if(err){
-          res.send(400)
+          res.sendStatus(400)
         }else{
-          res.send(200)
+          res.sendStatus(200)
         }
       })
     })

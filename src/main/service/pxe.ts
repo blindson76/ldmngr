@@ -1,9 +1,8 @@
 import { EventEmitter } from "events";
 import fs from 'fs'
 import { RouterAPI } from "./router";
-const express = require('express'),
-  dhcp = require('dhcp'),
-  tftp = require('tftp');
+import dhcp from 'dhcp';
+import tftp from 'tftp';
 
 export class PXEServer extends EventEmitter{
   tftpSvr
@@ -24,7 +23,6 @@ export class PXEServer extends EventEmitter{
       dhcpOpts={},
 
     } = opts
-    console.log('starting pxe server');
 
     if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()){
       fs.mkdirSync(root)
@@ -38,8 +36,14 @@ export class PXEServer extends EventEmitter{
         denyPUT: true,
       })
 
+      this.tftpSvr.on('request', (req, res)=>{
+        req.on('error', err=>{
+          //console.log('tftp req err', err)
+        })
+        console.log('tftp:', req.file)
+      })
+
       this.tftpSvr.on('listening',()=>{
-        console.log('tftp listening')
         this.emit('tftp.started')
 
         dhcp.addOption(97, {
@@ -64,6 +68,27 @@ export class PXEServer extends EventEmitter{
           type: 'ASCII',
           attr: 'vendorClassId',
           config: 'vendorClassId'
+        })
+
+        dhcp.addOption(77, {
+          config: "userClass",
+          type: "UInt8s",
+          name: "userClass"
+        })
+        dhcp.addOption(93, {
+          config: "clientSystem",
+          type: "UInt8s",
+          name: "clientSystem"
+        })
+        dhcp.addOption(94, {
+          config: "clientNDI",
+          type: "UInt8s",
+          name: "clientNDI"
+        })
+        dhcp.addOption(175, {
+          config: "etherBoot",
+          type: "UInt8s",
+          name: "etherBoot"
         })
 
         this.dhcpSvr = dhcp.createServer({
@@ -100,7 +125,6 @@ export class PXEServer extends EventEmitter{
         });
 
         this.dhcpSvr.on('listening', () => {
-            console.log('dhcp')
             this.emit('dhcp.started')
             this.emit('listening')
             if(cb){
@@ -108,7 +132,7 @@ export class PXEServer extends EventEmitter{
             }
           })
           .on('error', (err:Error)=>{
-            console.log('dhcp err:',err)
+            //console.log('dhcp err:',err)
           })
           .listen(null, address);
       })
@@ -116,7 +140,7 @@ export class PXEServer extends EventEmitter{
         console.log('tftp err',err)
       })
       .on('close', ()=>{
-        console.log('tftp stopped')
+        //console.log('tftp stopped')
       })
       .listen()
 
@@ -141,20 +165,20 @@ export class PXEApi extends RouterAPI{
     super()
     this.post('/start', (req,res)=>{
       this.pxe.start(req.body, err=>{
-        console.log("pxe err",err)
         if(err){
-          res.send(400)
+          console.log("pxe err",err)
+          res.sendStatus(400)
         }else{
-          res.send(200)
+          res.sendStatus(200)
         }
       })
     })
     this.post('/stop', (req,res)=>{
       this.pxe.stop(err=>{
         if(err){
-          res.send(400)
+          res.sendStatus(400)
         }else{
-          res.send(200)
+          res.sendStatus(200)
         }
       })
     })

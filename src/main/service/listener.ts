@@ -1,6 +1,5 @@
 import EventEmitter from "events";
 import { Socket, createSocket } from "dgram";
-import express from "express";
 import WebSocket from "ws";
 import { RouterAPI } from "./router";
 export class NodeListener extends EventEmitter{
@@ -61,30 +60,29 @@ export class ListenerAPI extends RouterAPI{
 
 
     this.ws('/notify', (ws:WebSocket, req)=>{
-      console.log('notify connected')
+      //console.log('notify connected')
       const cb = hb => {
         ws.send(JSON.stringify(hb))
       }
       this.mc.on('heartbeat', cb)
       ws.on('close', ()=>{
-        console.log('ws closed')
+        //console.log('ws closed')
         this.mc.removeListener('heartbeat', cb)
       })
     })
 
     this.post('/start', (req,res)=>{
       this.mc.listen(req.body, err=>{
-        console.log(err)
+        if(err)
+          console.log(err)
         res.sendStatus(200)
       })
-      console.log('mc start req')
     })
 
     this.post('/stop', (req,res)=>{
       this.mc.stop(()=>{
         res.sendStatus(200)
       })
-      console.log('mc start req')
     })
   }
 
