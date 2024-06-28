@@ -11,14 +11,9 @@ const start = async ()=>{
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      interface:'10.10.11.1',
-      port:16644,
-      group:'239.0.0.72'
-    })
+    }
   });
-  const data = await raw.json()
+  const data = await raw.text()
 
 }
 
@@ -42,49 +37,51 @@ const addNode = async node => {
 
 const invoke = (node, service, method, param) => {
 
+  const emitter = new EventEmitter()
   const Url =new URL(`ws://localhost:${port}/rpc/node/${node}/${service}/${method}`)
   //Url.searchParams.append('test','123\\123')
   const wss  =new WebSocket(Url)
   wss.onopen = ()=>{
-    console.log('open rpc')
     if(param){
       wss.send(JSON.stringify(param))
     }
   }
-  wss.onmessage =  msg=>{
-    try{
-      emitter.emit('data',JSON.parse(msg.data))
-    }catch(e){
-      emitter.emit('data', msg.data)
-    }
+  wss.onmessage =  (msg)=>{
+    const {type, data} = JSON.parse(msg.data)
+    emitter.emit(type, data)
   }
   wss.onerror = err=>{
-    console.log('ws err',err)
+    emitter.emit('error', err)
   }
   wss.onclose= e=>{
-    if(e.code/1000<2){
-      try{
-        emitter.emit('done', undefined, e.reason)
-      }catch(e){
-        console.log(e)
-        emitter.emit('done', e.toString())
-      }
-    }else{
-      console.log(e.reason)
-      emitter.emit('done', e.reason)
-    }
+    emitter.emit('close')
   }
-  const emitter = new EventEmitter()
   emitter.send = data=>{
     wss.send(data)
   }
   return emitter
 }
-
-export default (props) => {
+const listenStatus = cb => {
+  const Url =new URL(`ws://localhost:${port}/rpc/status`)
+  const wss  =new WebSocket(Url)
+  wss.onopen = ()=>{
+  }
+  wss.onmessage =  msg=>{
+    cb(JSON.parse(msg.data))
+  }
+  wss.onerror = err=>{
+    console.log('ws err',err)
+  }
+  wss.onclose= e=>{
+    console.log('ws node status closed')
+  }
+  return ()=>{
+    wss.close()
+  }
+}
+export default (open) => {
 
   const [connected, setConnected] = useState(false)
-  const [open, setOpen] = useState(false)
   useEffect(()=>{
 
     if(open){
@@ -96,19 +93,18 @@ export default (props) => {
           setConnected(false)
         }
       })()
-      return async ()=>{
-        await stop()
-        setConnected(false)
+      return ()=>{
+        stop()
+        .then(()=>setConnected(false))
       }
     }
 
   }, [open])
 
   return {
-    start: ()=>{setOpen(true)},
-    stop: ()=>{setOpen(false)},
     addNode,
     invoke,
+    listenStatus,
     connected
   }
 }

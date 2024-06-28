@@ -12,13 +12,14 @@ export class PXEServer extends EventEmitter{
   }
 
   start(opts, cb){
+    console.log('start pxe', opts)
     if(this.tftpSvr){
       return cb()
     }
     const {
       port,
       address,
-      root='C:/Users/ubozkurt/Desktop/work/pxe/root',
+      root='D:/work/root',
       tftpPort = 69,
       dhcpOpts={},
 

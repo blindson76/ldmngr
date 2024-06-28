@@ -25,7 +25,7 @@ export default class RPCService extends EventEmitter{
   init(cb){
     try{
       const packageDefinition = protoLoader.loadSync(
-          "C:\\Users\\ubozkurt\\Desktop\\work\\hloader\\proto\\loader.proto",
+          "D:/work/hloader/proto/loader.proto",
           rpcOptions
       )
       const rpcService = grpc.loadPackageDefinition(packageDefinition).loader
@@ -54,14 +54,19 @@ export default class RPCService extends EventEmitter{
   }
 
   connect(node:string){
-
+    console.log('connecting node')
     const {hostname, address, id} = node;
     //console.log('connecting to rpc',hostname)
     if (this.nodes[id]){
       Object.values(this.nodes[id]).forEach(rpc=>{
-        rpc.close(()=>{
-          console.log('closed rpc')
-        })
+        console.log('closing node')
+        try{
+          rpc.close(()=>{
+            console.log('closed rpc')
+          })
+        }catch(e){
+
+        }
       })
       this.nodes[id] = null
     }
@@ -69,6 +74,33 @@ export default class RPCService extends EventEmitter{
               address,
               grpc.credentials.createInsecure()
           ), ...svc}), {})
+    Object.keys(svc).forEach(svcName=>{
+      const service = svc[svcName]
+      const chan = service.getChannel()
+      service.waitForReady(Infinity, err=>{
+        console.log('waitready', svcName, err)
+      })
+      const connStatus = err => {
+        const state = chan.getConnectivityState()
+        //console.log('State changed', svcName, state)
+        if (svcName === 'Loader') {
+          this.emit('node-status', id, state)
+        }
+        if(err){
+          return
+        }
+        chan.watchConnectivityState(state, Infinity, connStatus)
+      }
+      connStatus()
+      // chan.watchConnectivityState(state, Infinity, err=>{
+      //   const newState = chan.getConnectivityState(false)
+      //   console.log('State changed', svcName, newState)
+      //   this.emit('node-status', id, newState)
+      //   chan.watchConnectivityState(newState, Infinity, err =>{
+
+      //   }
+      // })
+    })
     this.nodes[id] = svc
     //console.log(this.nodes.hostname)
   }
@@ -115,6 +147,18 @@ export class RPCApi extends RouterAPI {
       res.sendStatus(200)
     })
 
+    this.ws('/status', (ws:WebSocket, req)=>{
+      const listener = (node, status)=>{
+        ws.send(JSON.stringify({
+          node, status
+        }))
+      }
+      this.rpc.on('node-status', listener)
+      ws.on('close', ()=>{
+        this.rpc.removeListener('node-status', listener)
+      })
+    })
+
     this.ws('/node/:id/:service/:method', (ws:WebSocket, req)=>{
       //console.log("wsss", req.params, req.query)
       const {id, service, method} = req.params
@@ -131,12 +175,18 @@ export class RPCApi extends RouterAPI {
             const call = svc[method](params)
             call.on('data', data=>{
               console.log('stream data', data)
-              ws.send(JSON.stringify(data))
+              ws.send(JSON.stringify({
+                type:'data',
+                data
+              }))
             })
             call.on('error', err=>{
               console.log(err)
-              ws.send(err.toString())
-              ws.close(4004)
+              ws.send(JSON.stringify({
+                type:'error',
+                data:err.toString()
+              }))
+              ws.close(4000)
             })
             call.on('close', ()=>{
               try{
@@ -145,7 +195,7 @@ export class RPCApi extends RouterAPI {
 
               }
             })
-            ws.once('message', msg=>{
+            ws.on('message', msg=>{
               console.log(msg)
               const params = JSON.parse(msg)
               call.write(params)
@@ -154,11 +204,19 @@ export class RPCApi extends RouterAPI {
         }else{
           ws.once('message', msg=>{
             const params = JSON.parse(msg)
-            svc[method](params, (err, res)=>{
+            svc[method](params, (err, data)=>{
               if(err){
-                ws.close(4004, err.toString())
+                console.log('rpc err', err)
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  data: err.toString()
+                }))
+                ws.close(4000)
               }else{
-                ws.send(JSON.stringify(res))
+                ws.send(JSON.stringify({
+                  type:'data',
+                  data
+                }))
                 ws.close(1000)
               }
             })

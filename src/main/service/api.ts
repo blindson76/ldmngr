@@ -5,6 +5,8 @@ import { ListenerAPI } from "./listener";
 import { PXEApi, PXEServer } from "./pxe";
 import { RPCApi } from "./rpc";
 import express from 'express';
+import path from 'path';
+import fs from 'fs';
 
 export default class LMApi extends EventEmitter{
   app = express()
@@ -26,7 +28,7 @@ export default class LMApi extends EventEmitter{
 
   start() {
 
-    const listener = this.app.listen(80,'0.0.0.0', ()=>{
+    const listener = this.app.listen(0,'127.0.0.1', ()=>{
       this.emit('listening',listener.address().port)
     })
   }
@@ -38,9 +40,18 @@ export default class LMApi extends EventEmitter{
       next()
     })
     this.app.post('/start', (req,res)=>{
-      this.app.use('/', express.static(req.body.root))
-      res.send({status:'OK'})
+      //this.app.use('/', express.static(path.dirname()))
+      const cfg = this.loadConfig(req.body.config)
+      if(cfg){
+        res.send(cfg)
+      }else{
+        res.sendStatus(400)
+      }
     })
+  }
+  loadConfig(cfgFile){
+    const content = fs.readFileSync(cfgFile, 'utf-8')
+    return JSON.parse(content)
   }
 }
 

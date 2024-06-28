@@ -60,7 +60,7 @@ export class ListenerAPI extends RouterAPI{
 
 
     this.ws('/notify', (ws:WebSocket, req)=>{
-      //console.log('notify connected')
+      console.log('notify connected')
       const cb = hb => {
         ws.send(JSON.stringify(hb))
       }
