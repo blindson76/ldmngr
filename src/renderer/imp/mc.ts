@@ -40,7 +40,7 @@ const stop = async ()=>{
   });
 };
 
-export default ({config, onNode, open}) =>{
+export default ({config, onNode, open, onHeartbeat}) =>{
   if (!config){
     return
   }
@@ -92,6 +92,9 @@ export default ({config, onNode, open}) =>{
         }
         return {...nodes, [data.hostname]:data}
       })
+      if(onHeartbeat){
+        onHeartbeat(data)
+      }
     },
     onError:e=>{
       console.log(e)

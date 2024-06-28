@@ -32,6 +32,9 @@ const Loader = (props) => {
   const fileRef = useRef();
   const [uploaded, setUploaded] = useState('');
   const Action = (node, order) => {
+    if (node.status!=='READY'){
+      return
+    }
     return (
       <>
         <Button
@@ -405,9 +408,10 @@ const Loader = (props) => {
       >
         <Column field="hostname" header="Name" {...style}></Column>
         <Column field="address" header="Address" {...style}></Column>
+        <Column field="status" header="Status" {...style}></Column>
         <Column field="lastUpdate" header="LastUpdate" {...style}></Column>
         <Column header="Control" body={(m, i) => Action(m, 'Logoff')}></Column>
-        <Column header="Status" body={(m, i) => uploaded} {...style}></Column>
+        <Column field="message" header="Message" body={(m, i) => uploaded} {...style}></Column>
       </DataTable>
       <Dialog
         header="Exec"
@@ -446,21 +450,8 @@ export default ({config}) => {
     address:config?.loader?.address,
     root:'D:/work/root',}
     )
-  const {addNode, invoke, connected:rpcReady} = useRPC(pxeReady)
+  const {nodes, addNode, invoke, connected:rpcReady} = useRPC(config, pxeReady)
 
-  const {nodes, connected:mcReady} = useMC({
-    config:{
-      interface:config?.loader?.address,
-      port:config?.loader?.port,
-      group: config?.loader?.multicastGroup
-    },
-    onNode: node=>{
-      console.log("node", node)
-      addNode(node)
-    },
-    open:rpcReady
-
-  })
 
 
 

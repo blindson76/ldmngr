@@ -1,6 +1,9 @@
+import { ConnectivityState } from '@grpc/grpc-js/build/src/connectivity-state'
 import EventEmitter from 'events'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useWebSocket } from 'react-use-websocket/dist/lib/use-websocket'
+import { node } from 'webpack'
+import { useMC } from './service'
 
 const port = window.location.search.split('port=')[1]
 
@@ -23,7 +26,7 @@ const stop = async ()=>{
     method:'POST',
   });
 };
-const addNode = async node => {
+const addNode = async (node, setNodes) => {
   const Url =`http://localhost:${port}/rpc/add-node`
   const raw = await fetch(Url, {
     method:'POST',
@@ -33,6 +36,7 @@ const addNode = async node => {
     },
     body:JSON.stringify(node)
   });
+  setNodes(nodes=>({...nodes, [node.id]:{...nodes[node.id], address:node.address}}))
 }
 
 const invoke = (node, service, method, param) => {
@@ -79,8 +83,26 @@ const listenStatus = cb => {
     wss.close()
   }
 }
-export default (open) => {
+const loadNodes = configNodes => {
+  console.log(configNodes)
+  const nodes = configNodes.reduce((cur, node)=>{
+    cur[node.id] = {
+      hostname: node.name,
+      id:node.id,
+      address:'',
+      lastUpdate:'',
+      status:ConnectivityState[0]
+    }
+    return cur
+  }, {})
+  return nodes
+}
+export default ({nodes:configNodes, ...config}, open) => {
 
+  const [nodes, setNodes] = useState(()=>{
+    console.log('initial values')
+    return loadNodes(configNodes)
+  })
   const [connected, setConnected] = useState(false)
   useEffect(()=>{
 
@@ -101,10 +123,42 @@ export default (open) => {
 
   }, [open])
 
+  useEffect(()=>{
+    if(!connected){
+      return
+    }
+    listenStatus(({node,status})=>{
+      setNodes(nodes=>{
+        const newNodes = {...nodes, [node]:{...nodes[node], status: ConnectivityState[status]}}
+        return newNodes
+      })
+    })
+
+  }, [connected])
+
+
+  const {connected:mcReady} = useMC({
+    config:{
+      interface:config?.loader?.address,
+      port:config?.loader?.port,
+      group: config?.loader?.multicastGroup
+    },
+    onNode: node=>{
+      console.log("node", node)
+      addNode(node, setNodes)
+    },
+    onHeartbeat: node=>{
+      setNodes(nodes=>({...nodes, [node.id]:{...nodes[node.id], lastUpdate:node.lastUpdate}}))
+    },
+    open:connected
+
+  })
+
   return {
-    addNode,
+    addNode: node=>addNode(node, setNodes),
     invoke,
     listenStatus,
+    nodes,
     connected
   }
 }
