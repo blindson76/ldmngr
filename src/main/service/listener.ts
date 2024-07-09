@@ -2,6 +2,7 @@ import EventEmitter from "events";
 import { Socket, createSocket } from "dgram";
 import WebSocket from "ws";
 import { RouterAPI } from "./router";
+import { ResolveNetwork } from "../util/util";
 export class NodeListener extends EventEmitter{
   rx:Socket|null
 
@@ -12,6 +13,9 @@ export class NodeListener extends EventEmitter{
 
 
   listen(opts:{interface:string, group:string, port:number|undefined},cb){
+
+    const {ip} = ResolveNetwork(opts.interface)
+    console.log("listenner", opts.interface)
     if (this.rx){
       return cb()
     }
@@ -19,9 +23,9 @@ export class NodeListener extends EventEmitter{
       type:'udp4',
       reuseAddr:true
     })
-    this.rx.bind(opts.port, opts.interface, ()=>{
+    this.rx.bind(opts.port, ip, ()=>{
       this.emit('listening')
-      this.rx.addMembership(opts.group, opts.interface)
+      this.rx.addMembership(opts.group, ip)
       if (cb){
         cb()
       }

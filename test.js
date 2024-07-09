@@ -1,0 +1,5 @@
+const fs = require('fs')
+const {BSON} = require('bson')
+const data = require('D:/work/root/atest.json')
+const serialized = BSON.serialize(data)
+console.log(BSON.deserialize(serialized))

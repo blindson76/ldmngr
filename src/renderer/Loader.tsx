@@ -118,7 +118,7 @@ const Loader = (props) => {
             try {
               const call = invoke(node.id, 'Loader', 'PowerCtl', {
                 order: 'RestartTo',
-                bootEntry: 'HARDDISK',
+                bootEntry: 'HDD',
               })
                 .on('close', () => {})
                 .on('data', (data) => {
@@ -448,7 +448,8 @@ export default ({config}) => {
 
   const {connected:pxeReady} = usePXE({
     address:config?.loader?.address,
-    root:'D:/work/root',}
+    root:'D:/work/root',
+    httpPort:8077}
     )
   const {nodes, addNode, invoke, connected:rpcReady} = useRPC(config, pxeReady)
 
